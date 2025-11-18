@@ -20,4 +20,4 @@ Everything in this design is Java 21 and C11/C17 compatible.
 ## The Language
 
 This project is based on the [Commodore 64 V2.0 BASIC](https://www.c64-wiki.com/wiki/BASIC).
-There are tons of examples and further documentation all over the Internet.
+There are [tons of examples, forums and further documentation](https://www.lemon64.com/) all over the Internet.
