@@ -24,7 +24,8 @@ public class C64Basic {
         //private int line = 1;
         private boolean LINENO; // looking for a line number?
 
-        public Tokenizer(String source) {
+        // Tokenizer constructor
+        private Tokenizer(String source) {
             this.source = new StringBuffer(source);
             // load the HashMaps
             populateKeywords();
@@ -36,7 +37,8 @@ public class C64Basic {
             //cidx += 2; // leave 2 bytes for address link to next line
         }
 
-        byte[] scanTokens() {
+        // Kickoff the token scanning!
+        private byte[] scanTokens() {
             LINENO = true;
             while (!isAtEnd()) {
                 // We are at the beginning of the next lexeme.
@@ -50,6 +52,7 @@ public class C64Basic {
             return c;
         }
 
+        // Find simple tokens and predict larger ones.
         private void scanToken() {
             char c = advance();
             switch (c) {
@@ -91,6 +94,7 @@ public class C64Basic {
             }
         }
 
+        // Build a command token
         private void command() {
             //System.out.println("entered command()");
             for ( String c : commands ) {
@@ -112,12 +116,14 @@ public class C64Basic {
             addToken(source.substring(start, current));
         }
 
+        // Build a number token
         private void number() {
             //System.out.println("entered number()");
             while (isDigit(peek())) advance();
             addToken(Integer.parseInt(source.substring(start, current)));
         }
 
+        // Build a string token
         private void string() {
             //System.out.println("entered string()");
             while (peek() != '"' && !isAtEnd()) {
@@ -160,6 +166,7 @@ public class C64Basic {
             advance(); // move past the replaced code
         }
 
+        // Look ahead.
         private char peek() {
             if (isAtEnd()) return '\0';
             return source.charAt(current);
@@ -181,17 +188,20 @@ public class C64Basic {
             return source.charAt(current++);
         }
 
+        // Add token as bvyte
         private void addToken(byte b) {
             //System.out.printf("Adding byte 0x%02x%n", b);
             code[cidx++] = b;
         }
 
+        // Add token as int - little endian
         private void addToken(int i) {
             //System.out.printf("Adding int 0x%04x%n", i);
             code[cidx++] = (byte)(i & 0xff);
             code[cidx++] = (byte)((i & 0xff00) >> 8);
         }
 
+        // Add token as string
         private void addToken(String s) {
             //System.out.printf("Adding string %s%n", s);
             for (int x = 0; x < s.length(); x++)
@@ -199,12 +209,14 @@ public class C64Basic {
             //code[cidx++] = (byte)s.charAt(x);
         }
 
+        // Convert to PETSCII
         private char petscii(char c) {
             if ( c >= 'A' && c <= 'Z' ) return (char)(c + 32);
             if ( c >= 'a' && c <= 'z' ) return (char)(c - 32);
             return c;
         }
 
+        // Populate the keycodes map.
         private static void populateKeycodes() {
             keycodes.put("{white}", (byte)0x05);
             keycodes.put("{return}", (byte)0x0d);
@@ -236,6 +248,7 @@ public class C64Basic {
             keycodes.put("{pi}", (byte)0xff);
         }
 
+        // Populate the keywords map.
         private static void populateKeywords(){
             keywords.put("end",(byte)0x80);
             keywords.put("for",(byte)0x81);
@@ -323,6 +336,7 @@ public class C64Basic {
         }
     }
 
+    // A Sample hexdump (https://programmingby.design/algorithms/the-hex-dump/)
     private static void hexdump(byte[] bytes) {
         int start = (bytes[1] & 0xff) * 256 + (bytes[0] & 0xff);
         int pc = start;
@@ -352,16 +366,20 @@ public class C64Basic {
     public static void main(String[] args) throws IOException {
         byte[] bytes;
 
+        // Check for proper number of arguments
         if (args.length != 2) {
             System.out.println("Must provide source and object.");
             System.exit(3);
         }
 
+        // Read the file.
         bytes = Files.readAllBytes(Paths.get(args[0]));
 
+        // Send to Tokenizer as String.
         Tokenizer tzr = new Tokenizer(new String(bytes, Charset.defaultCharset()));
         byte[] program = tzr.scanTokens();
 
+        // Show hexdump and write the resultant program.
         hexdump(program);
         Files.write(Paths.get(args[1]), program, StandardOpenOption.CREATE);
     }
