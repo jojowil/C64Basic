@@ -188,7 +188,7 @@ public class C64Basic {
             return source.charAt(current++);
         }
 
-        // Add token as bvyte
+        // Add token as bvte
         private void addToken(byte b) {
             //System.out.printf("Adding byte 0x%02x%n", b);
             code[cidx++] = b;
