@@ -22,7 +22,7 @@ void addStrToken(const char *s);
 char petscii(char c);
 long myatol(const char* buf);
 void hexDump(const unsigned char *bytes, long length);
-void writeProgram(const char *fname, char *program, int len);
+void writeProgram(const char *fname, const unsigned char *program, int len);
 char* readAllBytes(const char* fname, long *len);
 
 #endif //C64BASIC_C64BASIC_H
