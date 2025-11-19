@@ -10,13 +10,14 @@
 // Yeah, there's a lot of globals... so?
 char *source;
 int srcLen;
-int start = 0;
-int current = 0;
+int start = 0; // start of the code section being tokenized
+int current = 0;// current position >= start
 int cidx = 0; // code index
 int nexti;    // where to put index of next tokenized line
 unsigned char code[38913] ; // 38911 basic byte free!
 bool LINENO; // looking for a line number?
 
+// keyword/keycode struct.
 typedef struct {
     char* name;
     unsigned char val;
@@ -105,8 +106,8 @@ Keyword keywords[]={
 {"mid$",0xca},
 {"go",0xcb}
 };
-
 int keywordLength = sizeof(keywords)/sizeof(keywords[0]);
+
 // Set keycodes and calculate length
 Keyword keycodes[]={
 {"{white}", 0x05},
@@ -143,7 +144,7 @@ int keycodeLength = sizeof(keycodes)/sizeof(keycodes[0]);
 
 // Kickoff the token scanning!
 unsigned char* scanTokens(int *len) {
-
+    // First two bytes are the starting address on C64
     code[cidx++] = 0x01;
     code[cidx++] = 0x08;
     nexti = cidx;
@@ -155,10 +156,10 @@ unsigned char* scanTokens(int *len) {
         start = current;
         scanToken();
     }
+    // At this point, all source code has been processed.
     addIntToken(0); // null pointer at end of program.
     // return only what we need.
     *len = cidx;
-    printf("cidx=%d\n", cidx);
     return code;
 }
 
@@ -179,10 +180,10 @@ void scanToken() {
         case '"': string(); break;
 
         case '\n' : case '\r' :
-            // mark end of line
+            // mark end of tokenized line
             addByteToken(0);
             int pos = cidx - 2 + 0x0801;
-            printf("cidx = 0x%04X, pos = 0x%04x\n", cidx, pos);
+            //printf("cidx = 0x%04X, pos = 0x%04x\n", cidx, pos);
             // replace previous link with new address.
             code[nexti]   = (char)(pos & 0xff);
             code[nexti+1] = (char)((pos & 0xff00) >> 8);
@@ -194,7 +195,6 @@ void scanToken() {
             if (isDigit(c) && LINENO) {
                 nexti = cidx;
                 cidx += 2; // leave room for the next pointer
-
                 number();
                 while(peek()==' ') advance(); // consume space(s) after line number
                 LINENO = false;
@@ -211,7 +211,7 @@ void command() {
         const char* c = keywords[x].name;
         if (strstr(source + start, c) == source+start) {
             unsigned char op = keywords[x].val;
-            printf("Found %s, 0x%02x\n", c, op);
+            //printf("Found %s, 0x%02x\n", c, op);
             addByteToken(op);
             current = start + (int)strlen(c); // adjust line
             // if it's a REM, special handling to end of line.
@@ -222,10 +222,10 @@ void command() {
                 addStrToken(s);
                 free(s);
             }
-            return;
+            return; // matched a keyword, leave.
         }
     }
-
+    // Add raw text that didn't match
     char *s = strndup(source+start, current-start);
     addStrToken(s);
     free(s);
@@ -251,7 +251,7 @@ void string() {
 
     char c = peek();
     // This is different from the Java version because we can't just replace the substring.
-    while (c != '"' && !isAtEnd() && bsp < 256) {
+    while (c != '"' && !isAtEnd() && bsp < 255) {
         if (c == '\n') break; //
         if (c == '{') {
             // keycode handling is just...messy.
@@ -263,7 +263,7 @@ void string() {
         }
         c = peek();
     }
-    bs[bsp] = 0; // end the string!
+    bs[bsp] = 0; // end the string! possibly redundant.
 
     // Maybe the closing ". C64 doesn't care about missing close "
     c = peek();
@@ -271,7 +271,6 @@ void string() {
         bs[bsp++] = c;
         advance();
     }
-
     addStrToken(bs);
 }
 
@@ -290,6 +289,7 @@ char keycode() {
             break;
         }
     }
+    // Keycodes without words can be decimal values
     if ( kc == 0 ) {
         kc = (char)(myatol(value+1) & 0xff);
     }
@@ -396,7 +396,7 @@ void hexDump(const unsigned char* bytes, long length) {
     printf(" %s\n", chars);
 }
 
-void writeProgram(const char *fname, char *program, int len) {
+void writeProgram(const char *fname, const unsigned char *program, int len) {
     FILE *file = fopen(fname, "w");
     if (file == NULL) {
         perror("Error opening object file");
