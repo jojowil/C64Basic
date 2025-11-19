@@ -15,7 +15,7 @@ This is renewal of my own brain and the joy I had using Commodore computers in t
 
 This is done in Java and C, so far, to demonstrate languages to my students.
 
-Everything in this design is Java 21 and C11/C17 compatible.
+Everything in this design is Java 21 and C23 compatible.
 
 ## The Language
 
