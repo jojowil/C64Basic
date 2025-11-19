@@ -17,8 +17,8 @@ public class C64Basic {
         static Map<String,Byte> keycodes = new HashMap<>();
         static String[] commands;
         byte[] code = new byte[38913]; // 38911 basic byte free!
-        private int start = 0;
-        private int current = 0;
+        private int start = 0; // start of the code section being tokenized
+        private int current = 0; // current position >= start
         private int cidx = 0; // code index
         private int nexti;    // where to put index of next tokenized line
         //private int line = 1;
@@ -31,6 +31,7 @@ public class C64Basic {
             populateKeywords();
             populateKeycodes();
 
+            // First two bytes are the starting address on C64
             code[cidx++] = (byte)(0x01);
             code[cidx++] = (byte)(0x08);
             nexti = cidx;
@@ -45,7 +46,8 @@ public class C64Basic {
                 start = current;
                 scanToken();
             }
-            addToken(0);
+            // At this point, all source code has been processed.
+            addToken(0); // null pointer at end of program.
             // return only what we need.
             byte[] c = new byte[cidx];
             System.arraycopy(code, 0, c, 0, cidx);
@@ -69,10 +71,10 @@ public class C64Basic {
                 case '"': string(); break;
 
                 case '\n' : case '\r' :
-                    // mark end of line
+                    // mark end of tokenized line
                     addToken((byte)0);
                     int pos = cidx - 2 + 0x0801;
-                    System.out.printf("cidx = 0x%04X, pos = 0x%04x%n", cidx, pos);
+                    //System.out.printf("cidx = 0x%04X, pos = 0x%04x%n", cidx, pos);
                     // replace previous link with new address.
                     code[nexti]   = (byte)(pos & 0xff);
                     code[nexti+1] = (byte)((pos & 0xff00) >> 8);
@@ -84,7 +86,6 @@ public class C64Basic {
                     if (isDigit(c) && LINENO) {
                         nexti = cidx;
                         cidx += 2; // leave room for the next pointer
-
                         number();
                         while(peek()==' ') advance(); // consume space(s) after line number
                         LINENO = false;
@@ -101,7 +102,7 @@ public class C64Basic {
                 //System.out.println(c + " " + source.indexOf(c) + " " + start);
                 if (source.indexOf(c, start) == start) {
                     byte op = keywords.get(c);
-                    System.out.printf("Found %s, 0x%02x%n", c, op);
+                    //System.out.printf("Found %s, 0x%02x%n", c, op);
                     addToken(op);
                     current = start + c.length(); // adjust line
                     // if it's a REM, special handling to end of line.
@@ -110,9 +111,10 @@ public class C64Basic {
                         while (peek() != '\n') advance();
                         addToken(source.substring(start, current));
                     }
-                    return;
+                    return; // matched a keyword, leave.
                 }
             }
+            // Add raw text that didn't match
             addToken(source.substring(start, current));
         }
 
@@ -153,6 +155,7 @@ public class C64Basic {
             if (keycodes.containsKey(value))
                 kc = keycodes.get(value);
             else
+                // Keycodes without words can be decimal values
                 try {
                     kc = (byte)(Integer.parseInt(value.substring(1,value.length()-1)) & 0xff);
                 } catch (NumberFormatException e) {
@@ -358,9 +361,12 @@ public class C64Basic {
                 chars.append('.');
             System.out.printf(" %02X", bytes[x]);
             pc++;
-
         }
-        System.out.println("\n");
+        // fix final row
+        int last = (pc - start) % 8;
+        for (int x = 0; x < 8-last; x++)
+            System.out.print("   ");
+        System.out.printf(" %s\n", chars);
     }
 
     public static void main(String[] args) throws IOException {
