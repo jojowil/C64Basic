@@ -313,7 +313,7 @@ public class C64Basic {
             keywords.put("int",(byte)0xb5);
             keywords.put("abs",(byte)0xb6);
             keywords.put("usr",(byte)0xb7);
-            keywords.put("fre",(byte)0xb7);
+            keywords.put("fre",(byte)0xb8);
             keywords.put("pos",(byte)0xb9);
             keywords.put("sqr",(byte)0xba);
             keywords.put("rnd",(byte)0xbb);
@@ -364,8 +364,9 @@ public class C64Basic {
         }
         // fix final row
         int last = (pc - start) % 8;
-        for (int x = 0; x < 8-last; x++)
-            System.out.print("   ");
+        if (last > 0)
+            for (int x = 0; x < 8-last; x++)
+                System.out.print("   ");
         System.out.printf(" %s\n", chars);
     }
 
