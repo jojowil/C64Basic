@@ -364,8 +364,9 @@ public class C64Basic {
         }
         // fix final row
         int last = (pc - start) % 8;
-        for (int x = 0; x < 8-last; x++)
-            System.out.print("   ");
+        if (last > 0)
+            for (int x = 0; x < 8-last; x++)
+                System.out.print("   ");
         System.out.printf(" %s\n", chars);
     }
 
