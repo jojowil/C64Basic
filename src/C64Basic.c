@@ -85,7 +85,7 @@ Keyword keywords[]={
 {"int",0xb5},
 {"abs",0xb6},
 {"usr",0xb7},
-{"fre",0xb7},
+{"fre",0xb8},
 {"pos",0xb9},
 {"sqr",0xba},
 {"rnd",0xbb},
@@ -408,6 +408,7 @@ void writeProgram(const char *fname, const unsigned char *program, int len) {
     fclose(file);
 }
 
+// Read a complete file into memory.
 char* readAllBytes(const char* fname, long *len) {
     // open file
     FILE *file = fopen(fname, "r");
