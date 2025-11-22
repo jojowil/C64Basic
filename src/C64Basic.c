@@ -317,7 +317,7 @@ static void string() {
     // Maybe the closing ". C64 doesn't care about missing close "
     c = peek();
     if (c != '\n' && c != '\r') {
-        bs[bsp++] = c;
+        bs[bsp] = c;
         advance();
     }
     addStrToken(bs);
@@ -326,7 +326,7 @@ static void string() {
 static char keycode() {
     //System.out.println("entered keycode()");
     int s = current;
-    char kc = 0;
+    unsigned char kc = 0;
     while (peek() != '}' && !isAtEnd()) advance();
     advance(); // consume the }
     char *value = strndup(source + s, current - s);
