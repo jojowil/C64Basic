@@ -6,43 +6,43 @@
 #include <errno.h>
 #include "git-banned.h"
 
-unsigned char *scanTokens(int *len);
+static unsigned char *scanTokens(int *len);
 
-void scanToken();
+static void scanToken();
 
-void command();
+static void command();
 
-void number();
+static void number();
 
-void string();
+static void string();
 
-char keycode();
+static char keycode();
 
-char peek();
+static char peek();
 
-int isDigit(char c);
+static int isDigit(char c);
 
-int isAlpha(char c);
+static int isAlpha(char c);
 
-int isAtEnd();
+static int isAtEnd();
 
-char advance();
+static char advance();
 
-void addByteToken(char b);
+static void addByteToken(char b);
 
-void addIntToken(int i);
+static void addIntToken(int i);
 
-void addStrToken(const char *s);
+static void addStrToken(const char *s);
 
-char petscii(char c);
+static char petscii(char c);
 
-long myatol(const char *buf);
+static long myatol(const char *buf);
 
-void hexDump(const unsigned char *bytes, long length);
+static void hexDump(const unsigned char *bytes, long length);
 
-void writeProgram(const char *fname, const unsigned char *program, int len);
+static void writeProgram(const char *fname, const unsigned char *program, int len);
 
-char *readAllBytes(const char *fname, long *len);
+static char *readAllBytes(const char *fname, long *len);
 
 // Yeah, there's a lot of globals... so?
 char *source;
@@ -180,7 +180,7 @@ int keycodeLength = sizeof(keycodes) / sizeof(keycodes[0]);
 
 
 // Kickoff the token scanning!
-unsigned char *scanTokens(int *len) {
+static unsigned char *scanTokens(int *len) {
     // First two bytes are the starting address on C64
     code[cidx++] = 0x01;
     code[cidx++] = 0x08;
@@ -201,7 +201,7 @@ unsigned char *scanTokens(int *len) {
 }
 
 // Find simple tokens and predict larger ones.
-void scanToken() {
+static void scanToken() {
     char c = advance();
     switch (c) {
         case '+': addByteToken((char) 0xaa);
@@ -254,7 +254,7 @@ void scanToken() {
 }
 
 // Build a command token
-void command() {
+static void command() {
     //System.out.println("entered command()");
     for (int x = 0; x < keywordLength; x++) {
         const char *c = keywords[x].name;
@@ -281,7 +281,7 @@ void command() {
 }
 
 // Build a number token
-void number() {
+static void number() {
     //System.out.println("entered number()");
     while (isDigit(peek())) advance();
     char *s = strndup(source + start, current - start);
@@ -290,7 +290,7 @@ void number() {
 }
 
 // Build a string token
-void string() {
+static void string() {
     //System.out.println("entered string()");
     // Use a local string limited to 255 characters.
     // This is the limit of a single C64 BASIC tokenized line, so...
@@ -323,7 +323,7 @@ void string() {
     addStrToken(bs);
 }
 
-char keycode() {
+static char keycode() {
     //System.out.println("entered keycode()");
     int s = current;
     char kc = 0;
@@ -349,42 +349,42 @@ char keycode() {
 }
 
 // Look ahead.
-char peek() {
+static char peek() {
     if (isAtEnd()) return '\0';
     return source[current];
 }
 
-int isDigit(char c) {
+static int isDigit(char c) {
     return c >= '0' && c <= '9';
 }
 
-int isAlpha(char c) {
+static int isAlpha(char c) {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c < 'z');
 }
 
-int isAtEnd() {
+static int isAtEnd() {
     return current >= srcLen;
 }
 
-char advance() {
+static char advance() {
     return source[current++];
 }
 
 // Add token as bvte
-void addByteToken(char b) {
+static void addByteToken(char b) {
     //System.out.printf("Adding byte 0x%02x%n", b);
     code[cidx++] = b;
 }
 
 // Add token as int - little endian
-void addIntToken(int i) {
+static void addIntToken(int i) {
     //System.out.printf("Adding int 0x%04x%n", i);
     code[cidx++] = (char) (i & 0xff);
     code[cidx++] = (char) ((i & 0xff00) >> 8);
 }
 
 // Add token as string
-void addStrToken(const char *s) {
+static void addStrToken(const char *s) {
     //System.out.printf("Adding string %s%n", s);
     size_t len = strlen(s);
     for (int x = 0; x < len; x++)
@@ -393,14 +393,14 @@ void addStrToken(const char *s) {
 }
 
 // Convert to PETSCII
-char petscii(char c) {
+static char petscii(char c) {
     if (c >= 'A' && c <= 'Z') return (char) (c + 32);
     if (c >= 'a' && c <= 'z') return (char) (c - 32);
     return c;
 }
 
 // Safe atol()
-long myatol(const char *buf) {
+static long myatol(const char *buf) {
     errno = 0;
     char *p;
     long a = strtol(buf, &p, 10); // also sets ERANGE
@@ -412,7 +412,7 @@ long myatol(const char *buf) {
 }
 
 // A Sample hexdump (https://programmingby.design/algorithms/the-hex-dump/)
-void hexDump(const unsigned char *bytes, long length) {
+static void hexDump(const unsigned char *bytes, long length) {
     // we and with 0xff to mask off the bits when sign-extended.
     int st = bytes[1] * 256 + bytes[0];
     printf("%d\n", st);
@@ -445,7 +445,7 @@ void hexDump(const unsigned char *bytes, long length) {
     printf(" %s\n", chars);
 }
 
-void writeProgram(const char *fname, const unsigned char *program, int len) {
+static void writeProgram(const char *fname, const unsigned char *program, int len) {
     FILE *file = fopen(fname, "w");
     if (file == NULL) {
         perror("Error opening object file");
@@ -458,7 +458,7 @@ void writeProgram(const char *fname, const unsigned char *program, int len) {
 }
 
 // Read a complete file into memory.
-char *readAllBytes(const char *fname, long *len) {
+static char *readAllBytes(const char *fname, long *len) {
     // open file
     FILE *file = fopen(fname, "r");
     if (file == NULL) {
