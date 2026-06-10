@@ -1,9 +1,91 @@
-import java.util.*;
+import java.util.Scanner;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Arrays;
+import java.util.Collections;
 
 public class BASIC {
 
     private static class Source {
+        private static class Node {
+            private int lineNo;
+            private String text;
+            private Node next;
 
+            private Node(int lineNo, String text,  Node next) {
+                this.lineNo = lineNo;
+                this.text = text;
+                this.next = next;
+            }
+        }
+        private static Node head;
+
+        private void dumpLines() {
+            Node p = head;
+            while (p != null) {
+                System.out.println(p.lineNo + " " + p.text);
+                p = p.next;
+            }
+            System.out.println();
+        }
+
+        private void handleLine(String line) {
+            //if (line == null || line.isEmpty()) return false;
+            int x = 0;
+            while (x < line.length() && Character.isDigit(line.charAt(x))) x++;
+            int lineNo =  Integer.parseInt(line.substring(0, x));
+            // empty line number - remove line from program
+            if (x == line.length()) {
+                remove(lineNo);
+                return;
+            }
+            // if line exists, update the line
+            Node p = find(lineNo);
+            if (p != null) {
+                p.text = line;
+                return;
+            }
+            // new line
+            add(lineNo, line);
+        }
+
+        private Node find(int lineNo) {
+            if (head == null) return null;
+            Node p = head;
+
+            while (p != null) {
+                if (p.lineNo == lineNo) return p;
+                p = p.next;
+            }
+            return null;
+        }
+
+        private void add(int lineNo, String line) {
+            Node b = null, c = head;
+            while (c != null && c.lineNo < lineNo) {
+                b = c;
+                c = c.next;
+            }
+            if (b == null)
+                head = new Node(lineNo, line, c);
+            else {
+                b.next = new Node(lineNo, line, c);
+            }
+        }
+
+        private void remove(int lineNo) {
+            Node p = find(lineNo);
+            if (p == null) return;
+            Node b = null, c = head;
+            while (c != p) {
+                b = c;
+                c = c.next;
+            }
+            if (b == null)
+                head = c.next;
+            else
+                b.next = c.next;
+        }
     }
 
     private static class Program {
@@ -11,33 +93,46 @@ public class BASIC {
     }
 
     private static class Var {
+        private enum VarType {STR, INT, FLT}
+        private enum VarAction {ADD, UPD, DEL}
+        private static class Node {
+            VarType type;
+            String name;
+            Object val;
+            Node next;
 
+            Node(VarType type, String name, Object val) {
+                this.type = type;
+                this.name = name;
+                this.val = val;
+            }
+        }
+        Node head = null;
 
-        public void add (String name, String val) {
-
+        public void act (String name, VarAction action, String val) {
+            Node p = new Node(VarType.STR, name, val);
         }
 
-        public void add (String name, int val) {
-
+        public void act (String name, VarAction action, int val) {
+            Node p = new Node(VarType.INT, name, val);
         }
 
-        public void add (String name, double val) {
-
+        public void act (String name, VarAction action, double val) {
+            Node p = new Node(VarType.FLT, name, val);
         }
     }
 
     private static class Tokenizer {
-        private final StringBuffer source;
+        private StringBuffer source;
         static Map<String, Byte> keywords = new HashMap<>();
-        static Map<String, Byte> keycodes = new HashMap<>();
         static String[] commands;
         byte[] code = new byte[38913]; // 38911 basic byte free!
         private int start = 0; // start of the code section being tokenized
         private int current = 0; // current position >= start
         private int cidx = 0; // code index
-        private int nexti;    // where to put index of next tokenized line
-        //private int line = 1;
-        private boolean LINENO; // looking for a line number?
+        private int nexti;    // where to put index of next tokenized lineNo
+        //private int lineNo = 1;
+        private boolean LINENO; // looking for a lineNo number?
 
         // Tokenizer constructor
         private Tokenizer(String source) {
@@ -49,7 +144,14 @@ public class BASIC {
             code[cidx++] = (byte) (0x01);
             code[cidx++] = (byte) (0x08);
             nexti = cidx;
-            //cidx += 2; // leave 2 bytes for address link to next line
+            //cidx += 2; // leave 2 bytes for address link to next lineNo
+        }
+
+        private byte[] tokenizeLine(String line) {
+            this.source =  new StringBuffer(line);
+            start = 0;
+            current = 0;
+            return scanTokens();
         }
 
         // Kickoff the token scanning!
@@ -104,10 +206,11 @@ public class BASIC {
                 case '"':
                     string();
                     break;
+/* Removed from original code to avoid adding pointers to tokenization.
 
                 case '\n':
                 case '\r':
-                    // mark end of tokenized line
+                    // mark end of tokenized lineNo
                     addToken((byte) 0);
                     int pos = cidx - 2 + 0x0801;
                     //System.out.printf("cidx = 0x%04X, pos = 0x%04x%n", cidx, pos);
@@ -116,14 +219,14 @@ public class BASIC {
                     code[nexti + 1] = (byte) ((pos & 0xff00) >> 8);
                     LINENO = true;
                     break; // fixup!
-
+*/
                 // if it's not special, bring it along.
                 default:
                     if (isDigit(c) && LINENO) {
                         nexti = cidx;
                         cidx += 2; // leave room for the next pointer
                         number();
-                        while (peek() == ' ') advance(); // consume space(s) after line number
+                        while (peek() == ' ') advance(); // consume space(s) after lineNo number
                         LINENO = false;
                     } else if (isAlpha(c))
                         command();
@@ -140,8 +243,8 @@ public class BASIC {
                     byte op = keywords.get(c);
                     //System.out.printf("Found %s, 0x%02x%n", c, op);
                     addToken(op);
-                    current = start + c.length(); // adjust line
-                    // if it's a REM, special handling to end of line.
+                    current = start + c.length(); // adjust lineNo
+                    // if it's a REM, special handling to end of lineNo.
                     if (op == (byte) 0x8f) {
                         start = current;
                         while (peek() != '\n') advance();
@@ -358,6 +461,7 @@ public class BASIC {
     };
 
     public static void main(String[] args) {
+        Source code = new Source();
 
         if (args.length != 0) {
             // FIXME process args
@@ -366,17 +470,19 @@ public class BASIC {
             // Interactive!
             Scanner kb = new Scanner(System.in);
             System.out.println("\nREADY.");
-
             while (kb.hasNext()) {
                 String line = kb.nextLine().strip();
+                // nothing to do with a blank line
+                if  (line.length() == 0) continue;
 
                 // true == program line including line number
                 if (!preProcess(line)) {
                     processCommand(line);
+                    System.out.println("\nREADY.");
                 } else {
-                    addLine(line);
+                    code.handleLine(line);
+                    code.dumpLines();
                 }
-                System.out.println("\nREADY.");
             }
         }
     }
@@ -390,10 +496,6 @@ public class BASIC {
     }
 
     private static void processCommand(String line) {
-
-    }
-
-    private static void addLine(String line) {
 
     }
 
