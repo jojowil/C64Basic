@@ -2,124 +2,236 @@ import java.util.Scanner;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Arrays;
+import java.util.TreeMap;
 import java.util.Collections;
+import java.util.EmptyStackException;
 
 public class BASIC {
 
-    private static class Source {
-        private static class Node {
-            private int lineNo;
-            private String text;
+    private static final int MAXLINENUM = 64999;
+
+    private static class GenStack<T> {
+        // the top of the stack
+        private Node top;
+        private int size;
+
+        private class Node {
+            private T data;
             private Node next;
 
-            private Node(int lineNo, String text,  Node next) {
-                this.lineNo = lineNo;
-                this.text = text;
-                this.next = next;
-            }
-        }
-        private static Node head;
-
-        private void dumpLines() {
-            Node p = head;
-            while (p != null) {
-                System.out.println(p.lineNo + " " + p.text);
-                p = p.next;
-            }
-            System.out.println();
-        }
-
-        private void handleLine(String line) {
-            //if (line == null || line.isEmpty()) return false;
-            int x = 0;
-            while (x < line.length() && Character.isDigit(line.charAt(x))) x++;
-            int lineNo =  Integer.parseInt(line.substring(0, x));
-            // empty line number - remove line from program
-            if (x == line.length()) {
-                remove(lineNo);
-                return;
-            }
-            // if line exists, update the line
-            Node p = find(lineNo);
-            if (p != null) {
-                p.text = line;
-                return;
-            }
-            // new line
-            add(lineNo, line);
-        }
-
-        private Node find(int lineNo) {
-            if (head == null) return null;
-            Node p = head;
-
-            while (p != null) {
-                if (p.lineNo == lineNo) return p;
-                p = p.next;
-            }
-            return null;
-        }
-
-        private void add(int lineNo, String line) {
-            Node b = null, c = head;
-            while (c != null && c.lineNo < lineNo) {
-                b = c;
-                c = c.next;
-            }
-            if (b == null)
-                head = new Node(lineNo, line, c);
-            else {
-                b.next = new Node(lineNo, line, c);
+            private Node(T item) {
+                data = item;
+                next = null;
             }
         }
 
-        private void remove(int lineNo) {
-            Node p = find(lineNo);
-            if (p == null) return;
-            Node b = null, c = head;
-            while (c != p) {
-                b = c;
-                c = c.next;
-            }
-            if (b == null)
-                head = c.next;
+        public GenStack () {
+            top = null;
+            size = 0;
+        }
+
+        // returns the top value or exception when empty.
+        public T peek() {
+            if (isEmpty())
+                throw new EmptyStackException();
             else
-                b.next = c.next;
+                return top.data;
+        }
+
+        // push new item on the top
+        public void push(T item) {
+            Node n = new Node(item);
+            n.next = top;
+            top = n;
+            size++;
+        }
+
+        // remove item from the top and return the removed value.
+        public T pop() {
+            T v;
+            if ( isEmpty() )
+                throw new EmptyStackException();
+            v = top.data;
+            top = top.next;
+            size--;
+            return v;
+        }
+
+        // debug method to dump the contents of the stack to the screen
+        public String toString() {
+            Node p = top;
+            String s = "";
+
+            while ( p != null ) {
+                s = s + p.data + "\n";
+                p = p.next;
+            }
+            return s;
+        }
+
+        // method to determine if the stack is empty.
+        public boolean isEmpty() {
+            return top == null;
+        }
+
+        // method to return the number of frames
+        public int size() {
+            return size;
+        }
+
+        // main method to test the class
+        public static void main(String[] args) {
+            GenStack<Integer> s = new GenStack<>();
+
+            s.push(7);
+            s.push(5);
+            s.push(3);
+            System.out.println("Stack length is " + s.size());
+            System.out.println("Stack contains:\n" + s);
+
+            while (! s.isEmpty()) {
+                System.out.println("Popped " + s.pop());
+            }
+
+            // intentially try to pop an empty stack
+            try {
+                System.out.println("Popped " + s.pop());
+            } catch (EmptyStackException e) {
+                System.out.println("That could have been bad!");
+            }
         }
     }
+
+    private static class Expr {
+        public static void apply(GenStack<Character> os, GenStack<Integer> vs) {
+
+            int	v1, v2, r;
+            char	op;
+
+            op = os.pop();
+            v2 = vs.pop();
+            v1 = vs.pop();
+
+            switch (op) {
+
+                case '+':
+                    vs.push(v1 + v2);
+                    break;
+
+                case '-':
+                    vs.push(v1 - v2);
+                    break;
+
+                case '/':
+                    vs.push(v1 / v2);
+                    break;
+
+                case '*':
+                    vs.push(v1 * v2);
+                    break;
+
+                case '%':
+                    vs.push(v1 % v2);
+                    break;
+            }
+        }
+
+        public static int eval(String s) {
+
+            int	x=0, num;
+            GenStack<Character> ostack = new GenStack<Character>();
+            GenStack<Integer> vstack = new GenStack<Integer>();
+            char c;
+
+            while ( x < s.length()) {
+                c = s.charAt(x);
+                switch(c) {
+
+                    case '(':
+                        ostack.push((char)c);
+                        break;
+
+                    case ')':
+                        while ( ostack.peek() != '(' )
+                            apply(ostack, vstack);
+                        ostack.pop();
+                        break;
+
+                    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+                        num = 0;
+                        while ( x < s.length() && Character.isDigit(c) ) {
+                            num = num * 10 + (c - '0');
+                            x++;
+                            if ( x < s.length())
+                                c = s.charAt(x);
+                        }
+                        x--;
+                        vstack.push(num);
+                        break;
+
+                    case '+', '-', '*', '/', '%':
+                        if ( !ostack.isEmpty() )
+                            while ( !ostack.isEmpty() && prec(ostack.peek()) >= prec(c))
+                                apply(ostack, vstack);
+                        ostack.push(c);
+                        break;
+
+                    case ' ', '\t': break;
+                }
+                x++;
+            }
+            while ( ! ostack.isEmpty() )
+                apply(ostack, vstack);
+
+            return vstack.pop();
+        }
+
+        public static int prec (char c) {
+
+            switch (c) {
+
+                case '+', '-': return(0);
+                case '*', '/', '%': return(1);
+                case '(': return(-1);
+            }
+
+            return (-1);
+        }
+    }
+
+    private static class SrcLine {
+        String line;
+        byte[] parsed;
+
+        SrcLine(String line) {
+            this.line = line;
+            Tokenizer t = new Tokenizer(line);
+            this.parsed = t.scanTokens();
+        }
+    }
+
+    private static TreeMap<Integer, SrcLine> Source;
+
+
+    private static void handleLine(String line) {
+        //if (line == null || line.isEmpty()) return false;
+        int x = 0;
+        while (x < line.length() && Character.isDigit(line.charAt(x))) x++;
+        int lineNo = Integer.parseInt(line.substring(0, x));
+        // empty line number - remove line from program
+        if (x == line.length())
+            Source.remove(lineNo);
+        else if (Source.get(lineNo) != null)
+            // if line exists, update the line
+            Source.replace(lineNo, new SrcLine(line.substring(x).trim()));
+        else
+            // new line
+            Source.put(lineNo, new SrcLine(line.substring(x).trim()));
+    }
+
 
     private static class Program {
 
-    }
-
-    private static class Var {
-        private enum VarType {STR, INT, FLT}
-        private enum VarAction {ADD, UPD, DEL}
-        private static class Node {
-            VarType type;
-            String name;
-            Object val;
-            Node next;
-
-            Node(VarType type, String name, Object val) {
-                this.type = type;
-                this.name = name;
-                this.val = val;
-            }
-        }
-        Node head = null;
-
-        public void act (String name, VarAction action, String val) {
-            Node p = new Node(VarType.STR, name, val);
-        }
-
-        public void act (String name, VarAction action, int val) {
-            Node p = new Node(VarType.INT, name, val);
-        }
-
-        public void act (String name, VarAction action, double val) {
-            Node p = new Node(VarType.FLT, name, val);
-        }
     }
 
     private static class Tokenizer {
@@ -148,7 +260,7 @@ public class BASIC {
         }
 
         private byte[] tokenizeLine(String line) {
-            this.source =  new StringBuffer(line);
+            this.source = new StringBuffer(line);
             start = 0;
             current = 0;
             return scanTokens();
@@ -460,8 +572,15 @@ public class BASIC {
             "?BREAK", // 30
     };
 
+    private static void printError(int code, int line) {
+        System.err.print(ERRORS64[code] + " ERROR");
+        if (line != -1) {
+            System.err.print(" in line " + line);
+        }
+    }
+
     public static void main(String[] args) {
-        Source code = new Source();
+        Source = new TreeMap<>();
 
         if (args.length != 0) {
             // FIXME process args
@@ -473,22 +592,17 @@ public class BASIC {
             while (kb.hasNext()) {
                 String line = kb.nextLine().strip();
                 // nothing to do with a blank line
-                if  (line.length() == 0) continue;
+                if (line.length() == 0) continue;
 
                 // true == program line including line number
                 if (!preProcess(line)) {
                     processCommand(line);
                     System.out.println("\nREADY.");
                 } else {
-                    code.handleLine(line);
-                    code.dumpLines();
+                    handleLine(line);
                 }
             }
         }
-    }
-
-    private static void doError(int e) {
-        System.out.println(( e < 0 || e > ERRORS64.length ) ? "?UNKNOWN" : ERRORS64[e] + " ERROR");
     }
 
     private static boolean preProcess(String line) {
@@ -496,26 +610,62 @@ public class BASIC {
     }
 
     private static void processCommand(String line) {
+        int b = -1, e = MAXLINENUM;
+        String l = line.toUpperCase().strip();
+        switch (l) {
+            case String s when s.startsWith("LIST") -> {
+                String t = l.substring(4).strip();
+                if (!t.isEmpty()) {
+                    if (t.indexOf('-') != -1) {
+                        String[] parts = t.split("-");
+                        System.out.println(parts.length);
+                        System.out.println(parts);
+                    } else {
+                        try {
+                            b = Integer.parseInt(t);
+                            e = b;
+                        } catch (Exception ex) {
+                            printError(11, -1);
+                            return;
+                        }
+                    }
+                }
+                CMDlist(b, e);
+            }
+            case String s when s.startsWith("RUN") -> {}
+            case String s when s.startsWith("CONT") -> {}
+            case String s when s.startsWith("LOAD") -> {}
+            case String s when s.startsWith("SAVE") -> {}
+            case String s when s.startsWith("VERIFY") -> {}
+            case String s when s.startsWith("NEW") -> {}
+            case String s when s.startsWith("CLR") -> {}
+            default -> printError(11, -1); // SYNTAX
+        }
+    }
+
+    private static void CMDrun(String line) {
 
     }
 
-    private void CMDrun(String line) {
+    private static void CMDlist(int beg, int end) {
+        for (Map.Entry<Integer, SrcLine> t : Source.entrySet()) {
+            int l = t.getKey();
+            String s = t.getValue().line;
+            if (l >= beg && l <= end) {
+                System.out.println(t.getKey() + " " + t.getValue().line);
+            }
+        }
+    }
+
+    private static void CMDload(String fn) {
 
     }
 
-    private void CMDlist(int beg, int end) {
+    private static void CMDsave(String fn) {
 
     }
 
-    private void CMDload(String fn) {
-
-    }
-
-    private void CMDsave(String fn) {
-
-    }
-
-    private void CMDverify(String fn) {
+    private static void CMDverify(String fn) {
 
     }
 }
