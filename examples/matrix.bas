@@ -1,5 +1,5 @@
-10 rem teeny tiny code rain effect
-20 printchr$(147):rem poke646,5:poke53281,0:poke53280,0
+10 rem improved code rain effect
+20 printchr$(147):poke646,5:poke53281,0:poke53280,0
 30 a=int(rnd(0)*22):b=int(rnd(0)*39):c=int(rnd(0)*22-a)
 40 print"{home}":ifa>0thenford=0toa:printtab(b);chr$(32):next
 50 ifc>0thenford=0toc:printtab(b);chr$(int(rnd(0)*57+33)):next
